@@ -1,19 +1,28 @@
 # PicPreview
 
-PicPreview is a Windows image preview prototype aimed at common images plus PSD-style design files.
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-## What is included
+PicPreview is a Windows image preview app for common image formats and PSD-style design files. It includes a desktop viewer and Windows Explorer thumbnail integration.
 
-- WPF desktop viewer with folder browsing, drag-and-drop, thumbnails, and large preview.
-- Shared thumbnail pipeline using Magick.NET and a local SQLite cache.
-- `QuickLooker.Thumbnailer`, a command-line renderer that can be called by Explorer integration.
-- C++ Shell thumbnail provider for Explorer thumbnails of `.psd`, `.psb`, `.tga`, `.webp`, `.avif`, `.heic`, and `.heif`.
+## Download
+
+Download the latest Windows installer from the [Releases](https://github.com/as135410-tech/PicPreview/releases/latest) page.
+
+The MSI installer is self-contained, installs to `C:\Program Files\PicPreview` by default, adds a Start Menu shortcut, and registers the Explorer thumbnail provider. Administrator permission is required during installation.
+
+## Features
+
+- Preview common image files in a Windows desktop app.
+- Browse folders, drag and drop files, view thumbnails, and open a large preview.
+- Generate thumbnails for `.psd`, `.psb`, `.tga`, `.webp`, `.avif`, `.heic`, and `.heif` in Windows Explorer.
+- Use a shared thumbnail pipeline powered by Magick.NET and a local SQLite cache.
+- Includes `QuickLooker.Thumbnailer`, a command-line renderer used by the Explorer integration.
 
 Some project and script filenames still use the original internal codename `QuickLooker`; the product name shown to users is PicPreview.
 
 ## Cache
 
-PicPreview stores its own thumbnail cache under `%LOCALAPPDATA%\PicPreview`.
+PicPreview stores its thumbnail cache under `%LOCALAPPDATA%\PicPreview`.
 
 - `picpreview-cache.db` stores the thumbnail index.
 - `thumbs\` stores generated PNG thumbnails.
@@ -30,7 +39,7 @@ dotnet build .\QuickLooker.slnx
 The .NET projects build with the installed .NET Desktop SDK.
 The Explorer extension lives in `src\QuickLooker.ShellExtension` and is built by the publish script because it needs a native C++ toolchain.
 
-For a publish folder:
+Create a publish folder:
 
 ```powershell
 .\tools\Publish-QuickLooker.ps1
@@ -38,15 +47,13 @@ For a publish folder:
 
 The publish script prefers Visual Studio C++ with Windows SDK. If Windows SDK is not installed but MSYS2 MinGW is available, it falls back to MinGW.
 
-## Enable Explorer thumbnails
+## Explorer Thumbnails
 
-After publishing:
+After publishing, register the Explorer thumbnail provider from an elevated PowerShell window:
 
 ```powershell
 .\tools\Register-ShellExtension.ps1 -RestartExplorer
 ```
-
-Run this from an elevated PowerShell window. Explorer's thumbnail pipeline needs the native provider registered at machine scope on this Windows setup.
 
 To remove the Explorer integration:
 
@@ -56,7 +63,7 @@ To remove the Explorer integration:
 
 The Explorer thumbnail provider is registered at machine scope, so installation and uninstallation require administrator permission.
 
-## Build an installer
+## Build an Installer
 
 Install WiX once:
 
@@ -68,8 +75,7 @@ wix eula accept wix7
 Then create a Windows MSI:
 
 ```powershell
-.\tools\Build-Installer.ps1 -UseMinGW
+.\tools\Build-Installer.ps1 -Version 1.0.0 -UseMinGW
 ```
 
-The MSI is written to `artifacts\installer\PicPreview-1.0.0-win-x64.msi`. It is self-contained, installs to `C:\Program Files\PicPreview`, adds a Start Menu shortcut, and registers the Explorer thumbnail provider at machine scope. The installer must be run as administrator.
-The setup wizard includes a destination-folder page, so the install directory can be changed during installation.
+The MSI is written to `artifacts\installer\PicPreview-1.0.0-win-x64.msi`. The setup wizard includes a destination-folder page, so the install directory can be changed during installation.
