@@ -1,6 +1,9 @@
 # PicPreview
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+<p>
+  <a href="README.md"><img src="https://img.shields.io/badge/Language-English-2ea44f?style=for-the-badge" alt="English"></a>
+  <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/%E8%AF%AD%E8%A8%80-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-2ea44f?style=for-the-badge" alt="简体中文"></a>
+</p>
 
 PicPreview 是一个 Windows 图片预览工具，面向常见图片格式和 PSD 类设计文件。它包含桌面预览程序，也支持 Windows 资源管理器缩略图集成。
 
