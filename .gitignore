@@ -1,0 +1,13 @@
+bin/
+obj/
+x64/
+artifacts/
+.wix/
+.vs/
+*.user
+*.suo
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.log

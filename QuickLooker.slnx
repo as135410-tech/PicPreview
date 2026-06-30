@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/QuickLooker.App/QuickLooker.App.csproj" />
+    <Project Path="src/QuickLooker.Core/QuickLooker.Core.csproj" />
+    <Project Path="src/QuickLooker.Thumbnailer/QuickLooker.Thumbnailer.csproj" />
+  </Folder>
+</Solution>
