@@ -1,84 +1,86 @@
 # PicPreview
 
 <p>
-  <a href="README.md"><img src="https://img.shields.io/badge/Language-English-2ea44f?style=for-the-badge" alt="English"></a>
-  <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/%E8%AF%AD%E8%A8%80-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-2ea44f?style=for-the-badge" alt="简体中文"></a>
+  <a href="README.en.md"><img src="https://img.shields.io/badge/Language-English-2ea44f?style=for-the-badge" alt="English"></a>
+  <a href="README.md"><img src="https://img.shields.io/badge/%E8%AF%AD%E8%A8%80-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-2ea44f?style=for-the-badge" alt="简体中文"></a>
 </p>
 
-PicPreview is a Windows image preview app for common image formats and PSD-style design files. It includes a desktop viewer and Windows Explorer thumbnail integration.
+PicPreview 是一个 Windows 图片预览工具，面向常见图片格式和 PSD 类设计文件。它包含桌面预览程序，也支持 Windows 资源管理器缩略图集成。
 
-## Download
+## 下载
 
-Download the latest Windows installer from the [Releases](https://github.com/as135410-tech/PicPreview/releases/latest) page.
+请到 [Releases](https://github.com/as135410-tech/PicPreview/releases/latest) 页面下载最新 Windows 安装包。
 
-The MSI installer is self-contained, installs to `C:\Program Files\PicPreview` by default, adds a Start Menu shortcut, and registers the Explorer thumbnail provider. Administrator permission is required during installation.
+MSI 安装包是自包含的，默认安装到 `C:\Program Files\PicPreview`，会添加开始菜单快捷方式，并自动注册资源管理器缩略图组件。安装时需要管理员权限。
 
-## Features
+## 功能
 
-- Preview common image files in a Windows desktop app.
-- Browse folders, drag and drop files, view thumbnails, and open a large preview.
-- Generate thumbnails for `.psd`, `.psb`, `.tga`, `.webp`, `.avif`, `.heic`, and `.heif` in Windows Explorer.
-- Use a shared thumbnail pipeline powered by Magick.NET and a local SQLite cache.
-- Includes `QuickLooker.Thumbnailer`, a command-line renderer used by the Explorer integration.
+- 在 Windows 桌面程序中预览常见图片文件。
+- 支持文件夹浏览、拖放文件、缩略图列表和大图预览。
+- 支持在 Windows 资源管理器中为 `.psd`、`.psb`、`.tga`、`.webp`、`.avif`、`.heic`、`.heif` 生成缩略图。
+- 使用基于 Magick.NET 和本地 SQLite 缓存的共享缩略图管线。
+- 包含 `QuickLooker.Thumbnailer` 命令行渲染器，供资源管理器集成调用。
 
-Some project and script filenames still use the original internal codename `QuickLooker`; the product name shown to users is PicPreview.
+部分项目和脚本文件名仍使用早期内部代号 `QuickLooker`；面向用户展示的产品名是 PicPreview。
 
-## Cache
+## 缓存
 
-PicPreview stores its thumbnail cache under `%LOCALAPPDATA%\PicPreview`.
+PicPreview 会把缩略图缓存存储在 `%LOCALAPPDATA%\PicPreview`。
 
-- `picpreview-cache.db` stores the thumbnail index.
-- `thumbs\` stores generated PNG thumbnails.
-- Cache maintenance runs at most once per day.
-- Entries not used for 90 days are removed.
-- The thumbnail folder is trimmed to 512 MB.
+- `picpreview-cache.db` 存储缩略图索引。
+- `thumbs\` 存储生成的 PNG 缩略图。
+- 缓存维护最多每天运行一次。
+- 90 天未使用的缓存记录会被清理。
+- 缩略图文件夹会被限制在 512 MB 以内。
 
-## Build
+## 构建
 
 ```powershell
 dotnet build .\QuickLooker.slnx
 ```
 
-The .NET projects build with the installed .NET Desktop SDK.
-The Explorer extension lives in `src\QuickLooker.ShellExtension` and is built by the publish script because it needs a native C++ toolchain.
+.NET 项目使用已安装的 .NET Desktop SDK 构建。
+资源管理器扩展位于 `src\QuickLooker.ShellExtension`，因为它需要原生 C++ 工具链，所以会由发布脚本构建。
 
-Create a publish folder:
+创建发布目录：
 
 ```powershell
 .\tools\Publish-QuickLooker.ps1
 ```
 
-The publish script prefers Visual Studio C++ with Windows SDK. If Windows SDK is not installed but MSYS2 MinGW is available, it falls back to MinGW.
+发布脚本会优先使用带 Windows SDK 的 Visual Studio C++ 工具链。如果未安装 Windows SDK，但系统中有 MSYS2 MinGW，则会回退使用 MinGW。
 
-## Explorer Thumbnails
+## 资源管理器缩略图
 
-After publishing, register the Explorer thumbnail provider from an elevated PowerShell window:
+如果通过 MSI 安装包安装，资源管理器缩略图组件会在安装过程中自动注册，安装完成后即可使用，不需要手动执行下面的脚本。
+
+下面的脚本主要给开发者使用：当你从源码构建并直接使用发布目录时，可以在管理员 PowerShell 中手动注册资源管理器缩略图组件：
 
 ```powershell
 .\tools\Register-ShellExtension.ps1 -RestartExplorer
 ```
 
-To remove the Explorer integration:
+移除开发环境中的资源管理器集成：
 
 ```powershell
 .\tools\Unregister-ShellExtension.ps1 -RestartExplorer
 ```
 
-The Explorer thumbnail provider is registered at machine scope, so installation and uninstallation require administrator permission.
+资源管理器缩略图组件会注册到机器级别，因此安装、卸载和手动注册都需要管理员权限。
 
-## Build an Installer
+## 构建安装包
 
-Install WiX once:
+首次安装 WiX：
 
 ```powershell
 dotnet tool install --global wix
 wix eula accept wix7
 ```
 
-Then create a Windows MSI:
+然后创建 Windows MSI：
 
 ```powershell
 .\tools\Build-Installer.ps1 -Version 1.0.0 -UseMinGW
 ```
 
-The MSI is written to `artifacts\installer\PicPreview-1.0.0-win-x64.msi`. The setup wizard includes a destination-folder page, so the install directory can be changed during installation.
+MSI 会输出到 `artifacts\installer\PicPreview-1.0.0-win-x64.msi`。安装向导包含安装目录选择页面，因此安装目录可以在安装时修改。
