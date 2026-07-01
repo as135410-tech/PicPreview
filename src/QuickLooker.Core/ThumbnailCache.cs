@@ -128,6 +128,15 @@ public sealed class ThumbnailCache
         var thumbnailPath = reader.GetString(0);
         var width = reader.GetInt32(1);
         var height = reader.GetInt32(2);
+        var currentThumbnailPath = GetThumbnailPath(fingerprint, size);
+
+        if (!string.Equals(
+            Path.GetFullPath(thumbnailPath),
+            Path.GetFullPath(currentThumbnailPath),
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
 
         if (!File.Exists(thumbnailPath))
         {
@@ -454,7 +463,7 @@ public sealed class ThumbnailCache
 
     private string GetThumbnailPath(FileFingerprint fingerprint, int size)
     {
-        var material = $"{fingerprint.FullPath}|{fingerprint.Length}|{fingerprint.LastWriteUtcTicks}|{size}";
+        var material = $"{fingerprint.FullPath}|{fingerprint.Length}|{fingerprint.LastWriteUtcTicks}|{size}|{ImageRenderer.RenderCacheVersion}";
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(material))).ToLowerInvariant();
         return Path.Combine(_thumbnailDirectory, $"{hash}.png");
     }

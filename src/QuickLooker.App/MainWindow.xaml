@@ -170,10 +170,30 @@
                 </Grid>
             </Border>
 
-            <Grid Grid.Column="1" Background="#0E1014">
-                <Image Source="{Binding CurrentPreview}"
+            <Grid x:Name="PreviewViewport"
+                  Grid.Column="1"
+                  Background="#0E1014"
+                  ClipToBounds="True"
+                  MouseWheel="PreviewViewport_MouseWheel"
+                  MouseLeftButtonDown="PreviewViewport_MouseLeftButtonDown"
+                  MouseLeftButtonUp="PreviewViewport_MouseLeftButtonUp"
+                  MouseMove="PreviewViewport_MouseMove">
+                <Image x:Name="PreviewImage"
+                       Source="{Binding CurrentPreview}"
                        Stretch="Uniform"
-                       RenderOptions.BitmapScalingMode="HighQuality" />
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       RenderTransformOrigin="0,0">
+                    <Image.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform x:Name="PreviewScaleTransform"
+                                            ScaleX="1"
+                                            ScaleY="1" />
+                            <TranslateTransform x:Name="PreviewTranslateTransform"
+                                                X="0"
+                                                Y="0" />
+                        </TransformGroup>
+                    </Image.RenderTransform>
+                </Image>
 
                 <TextBlock x:Name="EmptyText"
                            Text="打开或拖入图片"

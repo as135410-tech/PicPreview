@@ -13,6 +13,10 @@ namespace QuickLooker.App;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
+    private const double MinPreviewZoom = 1.0;
+    private const double MaxPreviewZoom = 12.0;
+    private const double PreviewZoomStep = 1.18;
+
     private static readonly HashSet<string> NativePreviewExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".jpg",
@@ -30,6 +34,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private CancellationTokenSource? _folderCancellation;
     private CancellationTokenSource? _previewCancellation;
     private ImageSource? _currentPreview;
+    private double _previewZoom = 1.0;
+    private bool _isPreviewDragging;
+    private Point _previewDragStart;
+    private Vector _previewDragStartOffset;
 
     public MainWindow()
     {
@@ -51,7 +59,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 _currentPreview = value;
                 OnPropertyChanged();
                 EmptyText.Visibility = value is null ? Visibility.Visible : Visibility.Collapsed;
+                ResetPreviewTransform();
             }
+        }
+    }
+
+    public async Task OpenPathAsync(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            await LoadFolderAsync(path);
+        }
+        else if (File.Exists(path) && SupportedImageFormats.IsSupported(path))
+        {
+            await OpenFileAsync(path);
         }
     }
 
@@ -90,6 +111,76 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void Next_Click(object sender, RoutedEventArgs e)
     {
         MoveSelection(1);
+    }
+
+    private void PreviewViewport_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (CurrentPreview is null)
+        {
+            return;
+        }
+
+        var oldZoom = _previewZoom;
+        var nextZoom = e.Delta > 0
+            ? _previewZoom * PreviewZoomStep
+            : _previewZoom / PreviewZoomStep;
+
+        _previewZoom = Math.Clamp(nextZoom, MinPreviewZoom, MaxPreviewZoom);
+
+        if (Math.Abs(_previewZoom - oldZoom) < 0.001)
+        {
+            return;
+        }
+
+        var position = e.GetPosition(PreviewViewport);
+        var scale = _previewZoom / oldZoom;
+
+        PreviewTranslateTransform.X = position.X - scale * (position.X - PreviewTranslateTransform.X);
+        PreviewTranslateTransform.Y = position.Y - scale * (position.Y - PreviewTranslateTransform.Y);
+        PreviewScaleTransform.ScaleX = _previewZoom;
+        PreviewScaleTransform.ScaleY = _previewZoom;
+
+        if (Math.Abs(_previewZoom - MinPreviewZoom) < 0.001)
+        {
+            PreviewTranslateTransform.X = 0;
+            PreviewTranslateTransform.Y = 0;
+        }
+
+        e.Handled = true;
+    }
+
+    private void PreviewViewport_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (CurrentPreview is null)
+        {
+            return;
+        }
+
+        _isPreviewDragging = true;
+        _previewDragStart = e.GetPosition(PreviewViewport);
+        _previewDragStartOffset = new Vector(PreviewTranslateTransform.X, PreviewTranslateTransform.Y);
+        PreviewViewport.CaptureMouse();
+        PreviewViewport.Cursor = Cursors.SizeAll;
+        e.Handled = true;
+    }
+
+    private void PreviewViewport_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isPreviewDragging)
+        {
+            return;
+        }
+
+        var position = e.GetPosition(PreviewViewport);
+        PreviewTranslateTransform.X = _previewDragStartOffset.X + position.X - _previewDragStart.X;
+        PreviewTranslateTransform.Y = _previewDragStartOffset.Y + position.Y - _previewDragStart.Y;
+        e.Handled = true;
+    }
+
+    private void PreviewViewport_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        StopPreviewDrag();
+        e.Handled = true;
     }
 
     private async void ImageList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -369,6 +460,42 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void SetStatus(string text)
     {
         StatusText.Text = text;
+    }
+
+    private void StopPreviewDrag()
+    {
+        if (!_isPreviewDragging)
+        {
+            return;
+        }
+
+        _isPreviewDragging = false;
+        PreviewViewport.ReleaseMouseCapture();
+        PreviewViewport.Cursor = null;
+    }
+
+    private void ResetPreviewTransform()
+    {
+        _previewZoom = 1.0;
+        _isPreviewDragging = false;
+
+        if (PreviewScaleTransform is not null)
+        {
+            PreviewScaleTransform.ScaleX = 1;
+            PreviewScaleTransform.ScaleY = 1;
+        }
+
+        if (PreviewTranslateTransform is not null)
+        {
+            PreviewTranslateTransform.X = 0;
+            PreviewTranslateTransform.Y = 0;
+        }
+
+        if (PreviewViewport is not null)
+        {
+            PreviewViewport.ReleaseMouseCapture();
+            PreviewViewport.Cursor = null;
+        }
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

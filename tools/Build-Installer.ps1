@@ -18,6 +18,8 @@ $provider = "{5BB47C0C-7A24-4ADC-9F23-072422343BA7}"
 $thumbnailHandler = "{E357FCCD-A995-4576-B01F-234630154E96}"
 $photoshopImageClsid = "{1F963D79-3062-4F86-997A-1A4074FD35E0}"
 $upgradeCode = "{23CC9F5C-F56B-4AA7-A53F-91AF8E2AF8BF}"
+$imageExtensions = @(".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".psd", ".psb", ".tga", ".ico", ".heic", ".heif", ".avif")
+$thumbnailExtensions = @(".psd", ".psb", ".tga", ".webp", ".avif", ".heic", ".heif")
 
 function Reset-Directory {
     param([string]$Path)
@@ -218,12 +220,27 @@ $xml.Add('    <DirectoryRef Id="INSTALLFOLDER">')
 $xml.Add("      <Component Id=`"$registryComponentId`" Guid=`"{18C8A885-71C2-47C3-A22C-6BD42882AED1}`">")
 $xml.Add('        <RegistryValue Root="HKLM" Key="Software\PicPreview" Name="Installed" Value="1" Type="integer" KeyPath="yes" />')
 $xml.Add('        <RegistryValue Root="HKLM" Key="Software\PicPreview" Name="ThumbnailerPath" Value="[INSTALLFOLDER]QuickLooker.Thumbnailer.exe" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\PicPreview\Capabilities" Name="ApplicationName" Value="PicPreview" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\PicPreview\Capabilities" Name="ApplicationDescription" Value="PicPreview image viewer" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\PicPreview\Capabilities" Name="ApplicationIcon" Value="[INSTALLFOLDER]PicPreview.exe,0" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\RegisteredApplications" Name="PicPreview" Value="Software\PicPreview\Capabilities" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\Classes\PicPreview.ImageFile" Value="PicPreview Image" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\Classes\PicPreview.ImageFile\DefaultIcon" Value="[INSTALLFOLDER]PicPreview.exe,0" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\Classes\PicPreview.ImageFile\shell\open\command" Value="&quot;[INSTALLFOLDER]PicPreview.exe&quot; &quot;%1&quot;" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\PicPreview.exe" Value="PicPreview" Type="string" />')
+$xml.Add('        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\PicPreview.exe\shell\open\command" Value="&quot;[INSTALLFOLDER]PicPreview.exe&quot; &quot;%1&quot;" Type="string" />')
 $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\Classes\CLSID\$provider`" Value=`"PicPreview Thumbnail Provider`" Type=`"string`" />")
 $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\Classes\CLSID\$provider\InprocServer32`" Value=`"[INSTALLFOLDER]QuickLooker.ShellExtension.dll`" Type=`"string`" />")
 $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\Classes\CLSID\$provider\InprocServer32`" Name=`"ThreadingModel`" Value=`"Apartment`" Type=`"string`" />")
 $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved`" Name=`"$provider`" Value=`"PicPreview Thumbnail Provider`" Type=`"string`" />")
 
-foreach ($extension in @(".psd", ".psb", ".tga", ".webp", ".avif", ".heic", ".heif")) {
+foreach ($extension in $imageExtensions) {
+    $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\PicPreview\Capabilities\FileAssociations`" Name=`"$extension`" Value=`"PicPreview.ImageFile`" Type=`"string`" />")
+    $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\Classes\Applications\PicPreview.exe\SupportedTypes`" Name=`"$extension`" Value=`"`" Type=`"string`" />")
+    $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\Classes\$extension\OpenWithProgids`" Name=`"PicPreview.ImageFile`" Value=`"`" Type=`"string`" />")
+}
+
+foreach ($extension in $thumbnailExtensions) {
     $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\Classes\$extension\ShellEx\$thumbnailHandler`" Value=`"$provider`" Type=`"string`" />")
     $xml.Add("        <RegistryValue Root=`"HKLM`" Key=`"Software\Classes\SystemFileAssociations\$extension\ShellEx\$thumbnailHandler`" Value=`"$provider`" Type=`"string`" />")
 }
@@ -237,7 +254,7 @@ $componentRefs.Add($registryComponentId)
 $shortcutComponentId = "StartMenuShortcut"
 $xml.Add('    <DirectoryRef Id="ApplicationProgramsFolder">')
 $xml.Add("      <Component Id=`"$shortcutComponentId`" Guid=`"{38D5CF94-1874-4EF3-913C-0F691D6D1D3E}`">")
-$xml.Add('        <Shortcut Id="QuickLookerStartMenuShortcut" Name="PicPreview" Description="PicPreview image preview" Target="[INSTALLFOLDER]QuickLooker.App.exe" WorkingDirectory="INSTALLFOLDER" />')
+$xml.Add('        <Shortcut Id="QuickLookerStartMenuShortcut" Name="PicPreview" Description="PicPreview image preview" Target="[INSTALLFOLDER]PicPreview.exe" WorkingDirectory="INSTALLFOLDER" />')
 $xml.Add('        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />')
 $xml.Add('        <RegistryValue Root="HKLM" Key="Software\PicPreview" Name="StartMenuShortcut" Value="1" Type="integer" KeyPath="yes" />')
 $xml.Add('      </Component>')
