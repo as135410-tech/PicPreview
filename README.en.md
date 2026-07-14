@@ -76,6 +76,8 @@ Install WiX once:
 dotnet tool install --global wix
 wix eula accept wix7
 wix extension add -g WixToolset.UI.wixext/7.0.0
+wix extension add -g WixToolset.BootstrapperApplications.wixext/7.0.0
+wix extension add -g WixToolset.Util.wixext/7.0.0
 ```
 
 Then create a Windows MSI:
@@ -84,4 +86,12 @@ Then create a Windows MSI:
 .\tools\Build-Installer.ps1 -Version 1.0.0
 ```
 
-The MSI is written to `artifacts\installer\PicPreview-1.0.0-win-x64.msi`. The setup wizard lets users choose a parent directory and always creates a `PicPreview` subfolder, keeping application files out of the selected directory itself.
+The MSI is written to `artifacts\installer\PicPreview-1.0.0-win-x64.msi`. The setup wizard shows the final program directory, whose default name includes the version, such as `PicPreview1.0.0`.
+
+Create the modern branded EXE setup:
+
+```powershell
+.\tools\Build-Setup.ps1 -Version 1.0.0
+```
+
+The EXE is written to `artifacts\installer\PicPreview-Setup-1.0.0-win-x64.exe`. On first install, the welcome page shows the final install directory and Browse button directly. The default directory includes the version, such as `PicPreview1.0.0`; after the user selects a parent directory, setup appends `PicPreview1.0.0` and writes the final path back to the path field. Setup runs the matching MSI in the background for installation, upgrades, and uninstall.

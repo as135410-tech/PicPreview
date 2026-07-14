@@ -76,6 +76,8 @@ dotnet build .\QuickLooker.slnx
 dotnet tool install --global wix
 wix eula accept wix7
 wix extension add -g WixToolset.UI.wixext/7.0.0
+wix extension add -g WixToolset.BootstrapperApplications.wixext/7.0.0
+wix extension add -g WixToolset.Util.wixext/7.0.0
 ```
 
 然后创建 Windows MSI：
@@ -84,4 +86,12 @@ wix extension add -g WixToolset.UI.wixext/7.0.0
 .\tools\Build-Installer.ps1 -Version 1.0.0
 ```
 
-MSI 会输出到 `artifacts\installer\PicPreview-1.0.0-win-x64.msi`。安装向导允许选择父目录，并始终在其中创建 `PicPreview` 子目录，避免把程序文件直接散落到用户选择的目录中。
+MSI 会输出到 `artifacts\installer\PicPreview-1.0.0-win-x64.msi`。安装向导显示程序文件的最终目录，默认目录按 `PicPreview1.0.0` 的形式包含版本号。
+
+创建带品牌界面的现代化 EXE 安装程序：
+
+```powershell
+.\tools\Build-Setup.ps1 -Version 1.0.0
+```
+
+EXE 会输出到 `artifacts\installer\PicPreview-Setup-1.0.0-win-x64.exe`。首次安装时，首页会直接显示最终安装目录和“浏览”按钮，默认目录按 `PicPreview1.0.0` 的形式包含版本号；用户通过“浏览”选择上级目录后，安装器会自动追加 `PicPreview1.0.0`，并把最终路径回填到路径框。安装程序在后台调用同版本 MSI 完成安装、升级和卸载。
