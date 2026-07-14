@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -13,9 +15,10 @@ namespace QuickLooker.App;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
-    private const double MinPreviewZoom = 1.0;
+    private const double MinPreviewZoom = 0.5;
     private const double MaxPreviewZoom = 12.0;
     private const double PreviewZoomStep = 1.18;
+    private const double ZoomSelectionTolerance = 0.001;
 
     private static readonly HashSet<string> NativePreviewExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -35,6 +38,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private CancellationTokenSource? _previewCancellation;
     private ImageSource? _currentPreview;
     private double _previewZoom = 1.0;
+    private int _previewRotationDegrees;
+    private bool _isUpdatingZoomSelection;
     private bool _isPreviewDragging;
     private Point _previewDragStart;
     private Vector _previewDragStartOffset;
@@ -113,6 +118,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         MoveSelection(1);
     }
 
+    private void RotateLeft_Click(object sender, RoutedEventArgs e)
+    {
+        RotatePreview(-90);
+    }
+
+    private void RotateRight_Click(object sender, RoutedEventArgs e)
+    {
+        RotatePreview(90);
+    }
+
+    private void ZoomComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isUpdatingZoomSelection || CurrentPreview is null)
+        {
+            return;
+        }
+
+        if (ZoomComboBox.SelectedItem is ComboBoxItem item && TryGetZoomLevel(item, out var zoom))
+        {
+            SetPreviewZoom(zoom, GetPreviewCenter(), resetOffset: Math.Abs(zoom - 1.0) < ZoomSelectionTolerance);
+        }
+    }
+
     private void PreviewViewport_MouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (CurrentPreview is null)
@@ -120,33 +148,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        var oldZoom = _previewZoom;
         var nextZoom = e.Delta > 0
             ? _previewZoom * PreviewZoomStep
             : _previewZoom / PreviewZoomStep;
 
-        _previewZoom = Math.Clamp(nextZoom, MinPreviewZoom, MaxPreviewZoom);
-
-        if (Math.Abs(_previewZoom - oldZoom) < 0.001)
-        {
-            return;
-        }
-
-        var position = e.GetPosition(PreviewViewport);
-        var scale = _previewZoom / oldZoom;
-
-        PreviewTranslateTransform.X = position.X - scale * (position.X - PreviewTranslateTransform.X);
-        PreviewTranslateTransform.Y = position.Y - scale * (position.Y - PreviewTranslateTransform.Y);
-        PreviewScaleTransform.ScaleX = _previewZoom;
-        PreviewScaleTransform.ScaleY = _previewZoom;
-
-        if (Math.Abs(_previewZoom - MinPreviewZoom) < 0.001)
-        {
-            PreviewTranslateTransform.X = 0;
-            PreviewTranslateTransform.Y = 0;
-        }
-
+        SetPreviewZoom(nextZoom, e.GetPosition(PreviewViewport), resetOffset: false);
         e.Handled = true;
+    }
+
+    private void PreviewViewport_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdatePreviewRotationCenter();
     }
 
     private void PreviewViewport_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -474,9 +486,123 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         PreviewViewport.Cursor = null;
     }
 
+    private void RotatePreview(int deltaDegrees)
+    {
+        if (CurrentPreview is null)
+        {
+            return;
+        }
+
+        _previewRotationDegrees = NormalizeRotation(_previewRotationDegrees + deltaDegrees);
+        UpdatePreviewRotationCenter();
+        PreviewRotateTransform.Angle = _previewRotationDegrees;
+    }
+
+    private void SetPreviewZoom(double zoom, Point anchor, bool resetOffset)
+    {
+        var oldZoom = _previewZoom;
+        var nextZoom = Math.Clamp(zoom, MinPreviewZoom, MaxPreviewZoom);
+
+        if (Math.Abs(nextZoom - oldZoom) < ZoomSelectionTolerance)
+        {
+            if (resetOffset)
+            {
+                ResetPreviewOffset();
+            }
+
+            UpdateZoomComboBoxText();
+            return;
+        }
+
+        _previewZoom = nextZoom;
+
+        var scale = _previewZoom / oldZoom;
+        PreviewTranslateTransform.X = anchor.X - scale * (anchor.X - PreviewTranslateTransform.X);
+        PreviewTranslateTransform.Y = anchor.Y - scale * (anchor.Y - PreviewTranslateTransform.Y);
+        PreviewScaleTransform.ScaleX = _previewZoom;
+        PreviewScaleTransform.ScaleY = _previewZoom;
+
+        if (resetOffset)
+        {
+            ResetPreviewOffset();
+        }
+
+        UpdateZoomComboBoxText();
+    }
+
+    private void ResetPreviewOffset()
+    {
+        PreviewTranslateTransform.X = 0;
+        PreviewTranslateTransform.Y = 0;
+    }
+
+    private Point GetPreviewCenter()
+    {
+        return new Point(PreviewViewport.ActualWidth / 2.0, PreviewViewport.ActualHeight / 2.0);
+    }
+
+    private void UpdatePreviewRotationCenter()
+    {
+        if (PreviewRotateTransform is null)
+        {
+            return;
+        }
+
+        var width = PreviewImage?.ActualWidth > 0 ? PreviewImage.ActualWidth : PreviewViewport.ActualWidth;
+        var height = PreviewImage?.ActualHeight > 0 ? PreviewImage.ActualHeight : PreviewViewport.ActualHeight;
+
+        PreviewRotateTransform.CenterX = width / 2.0;
+        PreviewRotateTransform.CenterY = height / 2.0;
+    }
+
+    private static int NormalizeRotation(int degrees)
+    {
+        degrees %= 360;
+        return degrees < 0 ? degrees + 360 : degrees;
+    }
+
+    private static bool TryGetZoomLevel(ComboBoxItem item, out double zoom)
+    {
+        zoom = 1.0;
+
+        return item.Tag is not null
+            && double.TryParse(item.Tag.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out zoom);
+    }
+
+    private void UpdateZoomComboBoxText()
+    {
+        if (ZoomComboBox is null)
+        {
+            return;
+        }
+
+        _isUpdatingZoomSelection = true;
+
+        try
+        {
+            foreach (var item in ZoomComboBox.Items.OfType<ComboBoxItem>())
+            {
+                if (TryGetZoomLevel(item, out var itemZoom)
+                    && Math.Abs(itemZoom - _previewZoom) < ZoomSelectionTolerance)
+                {
+                    ZoomComboBox.SelectedItem = item;
+                    return;
+                }
+            }
+
+            ZoomComboBox.SelectedIndex = -1;
+            ZoomComboBox.Text = string.Create(CultureInfo.InvariantCulture, $"{_previewZoom * 100.0:0}%");
+        }
+        finally
+        {
+            _isUpdatingZoomSelection = false;
+        }
+    }
+
     private void ResetPreviewTransform()
     {
         _previewZoom = 1.0;
+        _previewRotationDegrees = 0;
         _isPreviewDragging = false;
 
         if (PreviewScaleTransform is not null)
@@ -487,8 +613,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         if (PreviewTranslateTransform is not null)
         {
-            PreviewTranslateTransform.X = 0;
-            PreviewTranslateTransform.Y = 0;
+            ResetPreviewOffset();
+        }
+
+        if (PreviewRotateTransform is not null)
+        {
+            UpdatePreviewRotationCenter();
+            PreviewRotateTransform.Angle = 0;
         }
 
         if (PreviewViewport is not null)
@@ -496,6 +627,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             PreviewViewport.ReleaseMouseCapture();
             PreviewViewport.Cursor = null;
         }
+
+        UpdateZoomComboBoxText();
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
