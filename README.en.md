@@ -15,7 +15,7 @@ The MSI installer is self-contained, installs to `C:\Program Files\PicPreview` b
 
 ## Features
 
-- Preview common image files in a Windows desktop app.
+- Preview common image files in a Windows desktop app, including animated GIF playback.
 - Browse folders, drag and drop files, view thumbnails, and open a large preview.
 - Generate thumbnails for `.psd`, `.psb`, `.tga`, `.webp`, `.avif`, `.heic`, and `.heif` in Windows Explorer.
 - Use a shared thumbnail pipeline powered by Magick.NET and a local SQLite cache.
@@ -75,12 +75,13 @@ Install WiX once:
 ```powershell
 dotnet tool install --global wix
 wix eula accept wix7
+wix extension add -g WixToolset.UI.wixext/7.0.0
 ```
 
 Then create a Windows MSI:
 
 ```powershell
-.\tools\Build-Installer.ps1 -Version 1.0.0 -UseMinGW
+.\tools\Build-Installer.ps1 -Version 1.0.0
 ```
 
 The MSI is written to `artifacts\installer\PicPreview-1.0.0-win-x64.msi`. The setup wizard includes a destination-folder page, so the install directory can be changed during installation.

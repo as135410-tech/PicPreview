@@ -15,7 +15,7 @@ MSI 安装包是自包含的，默认安装到 `C:\Program Files\PicPreview`，�
 
 ## 功能
 
-- 在 Windows 桌面程序中预览常见图片文件。
+- 在 Windows 桌面程序中预览常见图片文件，并支持 GIF 动画播放。
 - 支持文件夹浏览、拖放文件、缩略图列表和大图预览。
 - 支持在 Windows 资源管理器中为 `.psd`、`.psb`、`.tga`、`.webp`、`.avif`、`.heic`、`.heif` 生成缩略图。
 - 使用基于 Magick.NET 和本地 SQLite 缓存的共享缩略图管线。
@@ -75,12 +75,13 @@ dotnet build .\QuickLooker.slnx
 ```powershell
 dotnet tool install --global wix
 wix eula accept wix7
+wix extension add -g WixToolset.UI.wixext/7.0.0
 ```
 
 然后创建 Windows MSI：
 
 ```powershell
-.\tools\Build-Installer.ps1 -Version 1.0.0 -UseMinGW
+.\tools\Build-Installer.ps1 -Version 1.0.0
 ```
 
 MSI 会输出到 `artifacts\installer\PicPreview-1.0.0-win-x64.msi`。安装向导包含安装目录选择页面，因此安装目录可以在安装时修改。

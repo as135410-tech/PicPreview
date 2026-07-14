@@ -1016,12 +1016,12 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID reserved)
     return TRUE;
 }
 
-extern "C" __declspec(dllexport) HRESULT __stdcall DllCanUnloadNow()
+STDAPI DllCanUnloadNow()
 {
     return g_moduleReferences == 0 ? S_OK : S_FALSE;
 }
 
-extern "C" __declspec(dllexport) HRESULT __stdcall DllGetClassObject(REFCLSID classId, REFIID riid, void** object)
+STDAPI DllGetClassObject(REFCLSID classId, REFIID riid, void** object)
 {
     if (object == nullptr)
     {

@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using QuickLooker.Core;
 
@@ -26,7 +27,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ".jpeg",
         ".png",
         ".bmp",
-        ".gif",
         ".tif",
         ".tiff",
         ".ico"
@@ -36,6 +36,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly SemaphoreSlim _thumbnailLimiter = new(4, 4);
     private CancellationTokenSource? _folderCancellation;
     private CancellationTokenSource? _previewCancellation;
+    private DispatcherTimer? _gifTimer;
+    private IReadOnlyList<GifPreviewFrame> _gifFrames = Array.Empty<GifPreviewFrame>();
+    private int _gifFrameIndex;
+    private int _gifCompletedIterations;
+    private int _gifIterationCount;
     private ImageSource? _currentPreview;
     private double _previewZoom = 1.0;
     private int _previewRotationDegrees;
@@ -57,16 +62,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public ImageSource? CurrentPreview
     {
         get => _currentPreview;
-        private set
-        {
-            if (!ReferenceEquals(_currentPreview, value))
-            {
-                _currentPreview = value;
-                OnPropertyChanged();
-                EmptyText.Visibility = value is null ? Visibility.Visible : Visibility.Collapsed;
-                ResetPreviewTransform();
-            }
-        }
+        private set => SetCurrentPreview(value, resetTransform: true);
     }
 
     public async Task OpenPathAsync(string path)
@@ -254,6 +250,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _folderCancellation?.Cancel();
         _previewCancellation?.Cancel();
+        StopGifAnimation();
         base.OnClosing(e);
     }
 
@@ -280,6 +277,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SetBusy(true);
             SetStatus("正在读取文件夹");
             FolderText.Text = folder;
+            StopGifAnimation();
             CurrentPreview = null;
             Images.Clear();
 
@@ -364,6 +362,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task LoadPreviewAsync(ImageItem item)
     {
         _previewCancellation?.Cancel();
+        StopGifAnimation();
         _previewCancellation = new CancellationTokenSource();
         var token = _previewCancellation.Token;
 
@@ -373,6 +372,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SetStatus($"正在预览 {item.Name}");
 
             var extension = Path.GetExtension(item.FullPath);
+
+            if (string.Equals(extension, ".gif", StringComparison.OrdinalIgnoreCase))
+            {
+                var animation = await RenderGifPreviewAsync(item.FullPath, token);
+
+                if (!token.IsCancellationRequested)
+                {
+                    StartGifAnimation(animation);
+                    SetStatus($"{item.FullPath} · GIF 动画 · {animation.Frames.Count} 帧");
+                }
+
+                return;
+            }
+
             ImageSource preview;
 
             if (NativePreviewExtensions.Contains(extension))
@@ -416,6 +429,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         var bytes = await ImageRenderer.RenderPreviewPngAsync(path, 4096, token);
         return LoadBitmapFromBytes(bytes);
+    }
+
+    private static async Task<GifPreviewAnimation> RenderGifPreviewAsync(string path, CancellationToken token)
+    {
+        var rendered = await ImageRenderer.RenderGifAnimationAsync(path, 4096, token).ConfigureAwait(false);
+        var frames = new GifPreviewFrame[rendered.Frames.Count];
+
+        for (var index = 0; index < rendered.Frames.Count; index++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var frame = rendered.Frames[index];
+            frames[index] = new GifPreviewFrame(LoadBitmapFromBytes(frame.PngBytes), frame.Delay);
+        }
+
+        return new GifPreviewAnimation(frames, rendered.IterationCount);
     }
 
     private static ImageSource LoadBitmapFromFile(string path)
@@ -472,6 +501,92 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void SetStatus(string text)
     {
         StatusText.Text = text;
+    }
+
+    private void StartGifAnimation(GifPreviewAnimation animation)
+    {
+        StopGifAnimation();
+
+        if (animation.Frames.Count == 0)
+        {
+            throw new InvalidDataException("GIF 中没有可显示的帧。");
+        }
+
+        _gifFrames = animation.Frames;
+        _gifIterationCount = animation.IterationCount;
+        _gifFrameIndex = 0;
+        _gifCompletedIterations = 0;
+        SetCurrentPreview(_gifFrames[0].Image, resetTransform: true);
+
+        if (_gifFrames.Count == 1)
+        {
+            return;
+        }
+
+        _gifTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = _gifFrames[0].Delay
+        };
+        _gifTimer.Tick += GifTimer_Tick;
+        _gifTimer.Start();
+    }
+
+    private void GifTimer_Tick(object? sender, EventArgs e)
+    {
+        var nextFrameIndex = _gifFrameIndex + 1;
+
+        if (nextFrameIndex >= _gifFrames.Count)
+        {
+            _gifCompletedIterations++;
+
+            if (_gifIterationCount > 0 && _gifCompletedIterations >= _gifIterationCount)
+            {
+                _gifTimer?.Stop();
+                return;
+            }
+
+            nextFrameIndex = 0;
+        }
+
+        _gifFrameIndex = nextFrameIndex;
+        SetCurrentPreview(_gifFrames[_gifFrameIndex].Image, resetTransform: false);
+
+        if (_gifTimer is not null)
+        {
+            _gifTimer.Interval = _gifFrames[_gifFrameIndex].Delay;
+        }
+    }
+
+    private void StopGifAnimation()
+    {
+        if (_gifTimer is not null)
+        {
+            _gifTimer.Stop();
+            _gifTimer.Tick -= GifTimer_Tick;
+            _gifTimer = null;
+        }
+
+        _gifFrames = Array.Empty<GifPreviewFrame>();
+        _gifFrameIndex = 0;
+        _gifCompletedIterations = 0;
+        _gifIterationCount = 0;
+    }
+
+    private void SetCurrentPreview(ImageSource? value, bool resetTransform)
+    {
+        if (ReferenceEquals(_currentPreview, value))
+        {
+            return;
+        }
+
+        _currentPreview = value;
+        OnPropertyChanged(nameof(CurrentPreview));
+        EmptyText.Visibility = value is null ? Visibility.Visible : Visibility.Collapsed;
+
+        if (resetTransform)
+        {
+            ResetPreviewTransform();
+        }
     }
 
     private void StopPreviewDrag()

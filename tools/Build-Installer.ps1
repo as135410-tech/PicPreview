@@ -47,18 +47,55 @@ function New-WixId {
     return "$Prefix$hash"
 }
 
+function Find-MSBuild {
+    $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+
+    if (Test-Path $vswhere) {
+        $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+
+        if (-not [string]::IsNullOrWhiteSpace($installationPath)) {
+            $candidate = Join-Path $installationPath "MSBuild\Current\Bin\MSBuild.exe"
+
+            if (Test-Path $candidate) {
+                return $candidate
+            }
+        }
+    }
+
+    $candidates = @(
+        "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+    )
+
+    return $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+
 function Build-ShellExtension {
     param([string]$OutputPath)
 
     $shellProject = Join-Path $root "src\QuickLooker.ShellExtension\QuickLooker.ShellExtension.vcxproj"
     $shellSource = Join-Path $root "src\QuickLooker.ShellExtension\QuickLookerThumbnailProvider.cpp"
     $shellDef = Join-Path $root "src\QuickLooker.ShellExtension\QuickLooker.ShellExtension.def"
-    $msbuild = "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
+    $msbuild = Find-MSBuild
     $windowsSdkInclude = "C:\Program Files (x86)\Windows Kits\10\Include"
 
-    if (-not $UseMinGW -and (Test-Path $msbuild) -and (Test-Path $windowsSdkInclude)) {
+    if (-not $UseMinGW -and -not [string]::IsNullOrWhiteSpace($msbuild) -and (Test-Path $windowsSdkInclude)) {
         $outDir = Split-Path -Parent $OutputPath
-        & $msbuild $shellProject /p:Configuration=$Configuration /p:Platform=x64 "/p:OutDir=$outDir\" /m
+        $arguments = @(
+            $shellProject,
+            "/p:Configuration=$Configuration",
+            "/p:Platform=x64",
+            "/p:OutDir=$outDir\",
+            "/m"
+        )
+
+        if ($msbuild -like "*\2019\*") {
+            $arguments += "/p:PlatformToolset=v142"
+        }
+
+        & $msbuild @arguments
 
         if ($LASTEXITCODE -ne 0) {
             throw "Shell extension build failed."
@@ -204,9 +241,10 @@ foreach ($relative in @("") + ($directories | ForEach-Object { Get-RelativeDirec
         $componentId = New-WixId "Cmp_" $fileRelative
         $fileId = New-WixId "File_" $fileRelative
         $source = Escape-Xml $file.FullName
+        $language = if ($file.Name -eq "e_sqlite3.dll") { ' DefaultLanguage="0"' } else { '' }
 
         $xml.Add("      <Component Id=`"$componentId`" Guid=`"*`">")
-        $xml.Add("        <File Id=`"$fileId`" Source=`"$source`" KeyPath=`"yes`" />")
+        $xml.Add("        <File Id=`"$fileId`" Source=`"$source`" KeyPath=`"yes`"$language />")
         $xml.Add('      </Component>')
         $componentRefs.Add($componentId)
         $fileIndex++
@@ -256,7 +294,7 @@ $xml.Add('    <DirectoryRef Id="ApplicationProgramsFolder">')
 $xml.Add("      <Component Id=`"$shortcutComponentId`" Guid=`"{38D5CF94-1874-4EF3-913C-0F691D6D1D3E}`">")
 $xml.Add('        <Shortcut Id="QuickLookerStartMenuShortcut" Name="PicPreview" Description="PicPreview image preview" Target="[INSTALLFOLDER]PicPreview.exe" WorkingDirectory="INSTALLFOLDER" />')
 $xml.Add('        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />')
-$xml.Add('        <RegistryValue Root="HKLM" Key="Software\PicPreview" Name="StartMenuShortcut" Value="1" Type="integer" KeyPath="yes" />')
+$xml.Add('        <RegistryValue Root="HKCU" Key="Software\PicPreview" Name="StartMenuShortcut" Value="1" Type="integer" KeyPath="yes" />')
 $xml.Add('      </Component>')
 $xml.Add('    </DirectoryRef>')
 $componentRefs.Add($shortcutComponentId)

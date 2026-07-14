@@ -8,6 +8,31 @@ $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 
+function Find-MSBuild {
+    $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+
+    if (Test-Path $vswhere) {
+        $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+
+        if (-not [string]::IsNullOrWhiteSpace($installationPath)) {
+            $candidate = Join-Path $installationPath "MSBuild\Current\Bin\MSBuild.exe"
+
+            if (Test-Path $candidate) {
+                return $candidate
+            }
+        }
+    }
+
+    $candidates = @(
+        "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+    )
+
+    return $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $root "artifacts\PicPreview-win-x64"
 }
@@ -31,11 +56,23 @@ $shellProject = Join-Path $root "src\QuickLooker.ShellExtension\QuickLooker.Shel
 $shellSource = Join-Path $root "src\QuickLooker.ShellExtension\QuickLookerThumbnailProvider.cpp"
 $shellDef = Join-Path $root "src\QuickLooker.ShellExtension\QuickLooker.ShellExtension.def"
 $shellDll = Join-Path $output "QuickLooker.ShellExtension.dll"
-$msbuild = "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
+$msbuild = Find-MSBuild
 $windowsSdkInclude = "C:\Program Files (x86)\Windows Kits\10\Include"
 
-if (-not $UseMinGW -and (Test-Path $msbuild) -and (Test-Path $windowsSdkInclude)) {
-    & $msbuild $shellProject /p:Configuration=$Configuration /p:Platform=x64 "/p:OutDir=$output\" /m
+if (-not $UseMinGW -and -not [string]::IsNullOrWhiteSpace($msbuild) -and (Test-Path $windowsSdkInclude)) {
+    $arguments = @(
+        $shellProject,
+        "/p:Configuration=$Configuration",
+        "/p:Platform=x64",
+        "/p:OutDir=$output\",
+        "/m"
+    )
+
+    if ($msbuild -like "*\2019\*") {
+        $arguments += "/p:PlatformToolset=v142"
+    }
+
+    & $msbuild @arguments
 
     if ($LASTEXITCODE -ne 0) {
         throw "Shell extension build failed."
