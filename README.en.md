@@ -84,4 +84,4 @@ Then create a Windows MSI:
 .\tools\Build-Installer.ps1 -Version 1.0.0
 ```
 
-The MSI is written to `artifacts\installer\PicPreview-1.0.0-win-x64.msi`. The setup wizard includes a destination-folder page, so the install directory can be changed during installation.
+The MSI is written to `artifacts\installer\PicPreview-1.0.0-win-x64.msi`. The setup wizard lets users choose a parent directory and always creates a `PicPreview` subfolder, keeping application files out of the selected directory itself.

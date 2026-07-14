@@ -84,4 +84,4 @@ wix extension add -g WixToolset.UI.wixext/7.0.0
 .\tools\Build-Installer.ps1 -Version 1.0.0
 ```
 
-MSI 会输出到 `artifacts\installer\PicPreview-1.0.0-win-x64.msi`。安装向导包含安装目录选择页面，因此安装目录可以在安装时修改。
+MSI 会输出到 `artifacts\installer\PicPreview-1.0.0-win-x64.msi`。安装向导允许选择父目录，并始终在其中创建 `PicPreview` 子目录，避免把程序文件直接散落到用户选择的目录中。
