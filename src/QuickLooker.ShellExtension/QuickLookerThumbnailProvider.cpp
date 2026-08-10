@@ -1108,7 +1108,7 @@ extern "C" __declspec(dllexport) HRESULT __stdcall DllRegisterServer()
         return hr;
     }
 
-    const wchar_t* extensions[] = { L".psd", L".psb", L".tga", L".webp", L".avif", L".heic", L".heif" };
+    const wchar_t* extensions[] = { L".psd", L".psb", L".tga", L".webp", L".avif", L".heic", L".heif", L".zip" };
 
     for (PCWSTR extension : extensions)
     {
@@ -1134,7 +1134,7 @@ extern "C" __declspec(dllexport) HRESULT __stdcall DllRegisterServer()
 
 extern "C" __declspec(dllexport) HRESULT __stdcall DllUnregisterServer()
 {
-    const wchar_t* extensions[] = { L".psd", L".psb", L".tga", L".webp", L".avif", L".heic", L".heif" };
+    const wchar_t* extensions[] = { L".psd", L".psb", L".tga", L".webp", L".avif", L".heic", L".heif", L".zip" };
 
     for (PCWSTR extension : extensions)
     {

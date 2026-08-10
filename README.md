@@ -17,7 +17,7 @@ MSI 安装包是自包含的，默认安装到 `C:\Program Files\PicPreview`，�
 
 - 在 Windows 桌面程序中预览常见图片文件，并支持 GIF 动画播放。
 - 支持文件夹浏览、拖放文件、缩略图列表和大图预览。
-- 支持在 Windows 资源管理器中为 `.psd`、`.psb`、`.tga`、`.webp`、`.avif`、`.heic`、`.heif` 生成缩略图。
+- 支持在 Windows 资源管理器中为 `.psd`、`.psb`、`.tga`、`.webp`、`.avif`、`.heic`、`.heif` 生成缩略图；`.zip` 文件会用内部最多三张图片生成压缩包式组合缩略图，并标明去重后的图片数量。
 - 使用基于 Magick.NET 和本地 SQLite 缓存的共享缩略图管线。
 - 包含 `QuickLooker.Thumbnailer` 命令行渲染器，供资源管理器集成调用。
 

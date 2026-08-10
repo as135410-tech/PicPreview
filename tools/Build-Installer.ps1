@@ -19,7 +19,7 @@ $thumbnailHandler = "{E357FCCD-A995-4576-B01F-234630154E96}"
 $photoshopImageClsid = "{1F963D79-3062-4F86-997A-1A4074FD35E0}"
 $upgradeCode = "{23CC9F5C-F56B-4AA7-A53F-91AF8E2AF8BF}"
 $imageExtensions = @(".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".psd", ".psb", ".tga", ".ico", ".heic", ".heif", ".avif")
-$thumbnailExtensions = @(".psd", ".psb", ".tga", ".webp", ".avif", ".heic", ".heif")
+$thumbnailExtensions = @(".psd", ".psb", ".tga", ".webp", ".avif", ".heic", ".heif", ".zip")
 
 function Reset-Directory {
     param([string]$Path)

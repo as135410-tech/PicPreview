@@ -17,7 +17,7 @@ The MSI installer is self-contained, installs to `C:\Program Files\PicPreview` b
 
 - Preview common image files in a Windows desktop app, including animated GIF playback.
 - Browse folders, drag and drop files, view thumbnails, and open a large preview.
-- Generate thumbnails for `.psd`, `.psb`, `.tga`, `.webp`, `.avif`, `.heic`, and `.heif` in Windows Explorer.
+- Generate thumbnails for `.psd`, `.psb`, `.tga`, `.webp`, `.avif`, `.heic`, and `.heif` in Windows Explorer. For `.zip` files, build an archive-style collage from up to three contained images and show the deduplicated image count.
 - Use a shared thumbnail pipeline powered by Magick.NET and a local SQLite cache.
 - Includes `QuickLooker.Thumbnailer`, a command-line renderer used by the Explorer integration.
 

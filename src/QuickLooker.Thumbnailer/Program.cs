@@ -38,7 +38,15 @@ static async Task<int> CreateThumbnailAsync(IReadOnlyDictionary<string, string> 
     var output = Required(options, "output");
     var size = OptionalInt(options, "size", 256);
 
-    await ImageRenderer.RenderThumbnailAsync(input, output, size);
+    if (ZipPsdThumbnailRenderer.IsZipFile(input))
+    {
+        await ZipPsdThumbnailRenderer.RenderThumbnailAsync(input, output, size);
+    }
+    else
+    {
+        await ImageRenderer.RenderThumbnailAsync(input, output, size);
+    }
+
     Console.WriteLine(output);
     return 0;
 }

@@ -68,7 +68,7 @@ if ($process.ExitCode -ne 0) {
 
 $thumbnailHandler = "{E357FCCD-A995-4576-B01F-234630154E96}"
 $provider = "{5BB47C0C-7A24-4ADC-9F23-072422343BA7}"
-$extensions = @(".psd", ".psb", ".tga", ".webp", ".avif", ".heic", ".heif")
+$extensions = @(".psd", ".psb", ".tga", ".webp", ".avif", ".heic", ".heif", ".zip")
 
 Set-RegistryDefaultValue `
     -Root ([Microsoft.Win32.Registry]::LocalMachine) `
